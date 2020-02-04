@@ -16,10 +16,17 @@ def get_sec(time_str):
     return int(h) * 60 + int(m) + int(s) / 1000
 
 
+def get_region(pos_x, pos_y, df_pos):
+    for row_in_reg in df_pos.head().itertuples():
+        is_in_x = row_in_reg.X + row_in_reg.Xlen >= pos_x >= row_in_reg.X
+        is_in_y = row_in_reg.Y + row_in_reg.Ylen >= pos_y >= row_in_reg.Y
+        if is_in_x and is_in_y:
+            return row_in_reg.Sem
+    return -1
+
+
 def get_question(row_num, list_questions):
     returning = 0
-    if row_num == 704:
-        print("A")
     for i in range(0, len(list_questions)):
         start = list_questions[i][0]
         end = list_questions[i][1]
@@ -64,11 +71,20 @@ if __name__ == "__main__":
         time_stapms.append("Time " + str(i))
     df = pd.read_csv(r"data/question_time.csv", parse_dates=[time_stapms])
 
+    dfr = pd.read_csv(r"data/regions.csv")
+
+    # sem_zero = get_region(400, 269, dfr) #check if function get region works
+    # print(sem_zero)
+
+    RES_X = 1920
+    RES_Y = 1080
+    # print(dfr)
+
     # print(df.dtypes.__len__())
-    print(df)
+    # print(df)
     axes = df.axes
     # print(axes[1])  # axes[1][1] prvi red
-    print(df.dtypes)
+    # print(df.dtypes)
 
     basePath = os.path.dirname(os.path.abspath(__file__))
     filePath = basePath + "\\data\\questions"
@@ -76,17 +92,18 @@ if __name__ == "__main__":
     print(users)
 
     arr = list()
-    # df.head().itertuples() - More optimized 150x times faster, change if speed needed
+    # df.itertuples() - More optimized 150x times faster iterrows
     # but be aware call needs to be row.User and has only row in for loop
-    for index, row in df.head().iterrows():  # bez head prolazi kroz sve
-
-        folder_name = "user" + str(row["User"])
-        file_name = "User " + str(row["User"]) + "_all_gaze.csv"
+    index = 0
+    for row in df.itertuples():  # bez head prolazi kroz sve
+        index = index + 1
+        folder_name = "user" + str(row.User)
+        file_name = "User " + str(row.User) + "_all_gaze.csv"
         print("I=" + str(index), folder_name)  # row[1], row[2], row[3], row[4], row[5])
-        times = row.values[0]  # TIME FROM SPLIT TIME CSV
+        times = row[1]  # TIME FROM SPLIT TIME CSV
         list_times = times.split(" ")
         sec_times = [get_sec(time_user) for time_user in list_times]  # Got seconds that are same as 1 col in splitTime
-        print(sec_times)
+        # print(sec_times)
         dfu = pd.read_csv(filePath + "\\" + folder_name + "\\" + file_name)
         question_times = get_column(dfu, 0)  # Analysis data per user
         questions = list()
@@ -103,25 +120,30 @@ if __name__ == "__main__":
         row_array = np.arange(len(dfu))  # get row numbers for dataframe 0..row_size
 
         dfu[dfu.axes[1][6]] = [get_question(user_iter, questions) for user_iter in
-                               row_array]
+                               row_array]  # Adding to 6th col which question it is for
 
-        print(dfu[questions[2][0]:questions[2][1]])  # Example of selected rows for
+        coordinates_list = [[row_coordinates.FPOGX * RES_X, row_coordinates.FPOGY * RES_Y] for row_coordinates in
+                            dfu.itertuples()]
+
+        dfu["Regions"] = [get_region(cords[0], cords[1], dfr) for cords in coordinates_list]
+
+        # print(dfu[questions[2][0]:questions[2][1]])  # Example of selected rows for
 
         # dfu[dfu.axes[1][6]] = 1
         # print(dfu.axes[1])
         # print("----------")
-        print(dfu.dtypes)
+        # print(dfu.dtypes)
         # print("----------")
-        print(dfu)
+        # print(dfu)
         new_headers = [dfu.axes[1][0], dfu.axes[1][1], dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
-                       "Question"]
+                       "Question", "Regions"]
         for i, g in dfu.groupby(dfu.axes[1][6]):
-            if i == 0: # All other that are not question from 1 to 33
+            if i == 0:  # All other that are not question from 1 to 33
                 continue
             dirName = path_processed + "/" + folder_name
             if not os.path.exists(dirName):
                 os.mkdir(dirName)
                 print("Directory ", dirName, " Created ")
-            g.to_csv(dirName + "\\" + '{}.csv'.format(i), header=new_headers, index_label=False)
+            g.to_csv(dirName + "\\" + '{}.csv'.format(i), header=new_headers, mode='w', index=False, index_label=False)
 
         # Foreach in timestamp ( load User folder all_gazes and split)
