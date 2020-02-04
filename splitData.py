@@ -5,6 +5,42 @@ def make_parser(cls):
     return parse_commas
 
 
+def get_column(data_frame, column):
+    """From pandas dataframe gets column of data"""
+    return data_frame[data_frame.axes[1][column]]
+
+
+def get_sec(time_str):
+    """Get Seconds from time."""
+    h, m, s = time_str.split(':')
+    return int(h) * 60 + int(m) + int(s) / 1000
+
+
+def get_question(row_num, list_questions):
+    returning = 0
+    if row_num == 704:
+        print("A")
+    for i in range(0, len(list_questions)):
+        start = list_questions[i][0]
+        end = list_questions[i][1]
+        if row_num >= start and row_num <= end:
+            returning = i + 1
+            break
+    return returning
+
+
+def get_range(column_time, time_stamps, question):
+    start = -1
+    end = -1
+    for j in range(0, len(column_time)):
+        if column_time[j] <= time_stamps[question - 1]:
+            start = j
+        elif column_time[j] >= time_stamps[question]:
+            end = j
+            break
+    return start, end
+
+
 if __name__ == "__main__":
     import re
     import pandas as pd
@@ -19,6 +55,7 @@ if __name__ == "__main__":
     from Data import DataArray
 
     path = r"data/questions"
+    path_processed = r"data/processed"
 
     to_int = make_parser(int)
 
@@ -39,23 +76,52 @@ if __name__ == "__main__":
     print(users)
 
     arr = list()
-    #df.head().itertuples() - More optimized
+    # df.head().itertuples() - More optimized 150x times faster, change if speed needed
+    # but be aware call needs to be row.User and has only row in for loop
     for index, row in df.head().iterrows():  # bez head prolazi kroz sve
 
         folder_name = "user" + str(row["User"])
         file_name = "User " + str(row["User"]) + "_all_gaze.csv"
         print("I=" + str(index), folder_name)  # row[1], row[2], row[3], row[4], row[5])
-        times = row.values[0]
+        times = row.values[0]  # TIME FROM SPLIT TIME CSV
         list_times = times.split(" ")
-        print(times)
+        sec_times = [get_sec(time_user) for time_user in list_times]  # Got seconds that are same as 1 col in splitTime
+        print(sec_times)
         dfu = pd.read_csv(filePath + "\\" + folder_name + "\\" + file_name)
-        #dfu.astype({dfu.axes[1][1]:""})
-        print(dfu.axes[1])
-        print("----------")
+        question_times = get_column(dfu, 0)  # Analysis data per user
+        questions = list()
+        for question in range(1, 34):
+            starting, ending = get_range(question_times, sec_times, question)  # Not optimized
+            # print("Q=" + str(question) + " start=" + str(starting) + " ending=" + str(ending))
+            if question > 1:  # Fix that questions don't overlap
+                if questions[len(questions) - 1][1] > starting:
+                    starting = questions[len(questions) - 1][1] + 1
+            questions.append([starting, ending])
+
+        # dfu.astype({dfu.axes[1][1]:""})
+
+        row_array = np.arange(len(dfu))  # get row numbers for dataframe 0..row_size
+
+        dfu[dfu.axes[1][6]] = [get_question(user_iter, questions) for user_iter in
+                               row_array]
+
+        print(dfu[questions[2][0]:questions[2][1]])  # Example of selected rows for
+
+        # dfu[dfu.axes[1][6]] = 1
+        # print(dfu.axes[1])
+        # print("----------")
         print(dfu.dtypes)
-        print("----------")
+        # print("----------")
         print(dfu)
-        #TODO parse time
-        #TODO 2, 2 iters to check which time is needed
-        #TODO 3, split in folders
+        new_headers = [dfu.axes[1][0], dfu.axes[1][1], dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
+                       "Question"]
+        for i, g in dfu.groupby(dfu.axes[1][6]):
+            if i == 0: # All other that are not question from 1 to 33
+                continue
+            dirName = path_processed + "/" + folder_name
+            if not os.path.exists(dirName):
+                os.mkdir(dirName)
+                print("Directory ", dirName, " Created ")
+            g.to_csv(dirName + "\\" + '{}.csv'.format(i), header=new_headers, index_label=False)
+
         # Foreach in timestamp ( load User folder all_gazes and split)
