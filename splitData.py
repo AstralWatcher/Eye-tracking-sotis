@@ -17,7 +17,7 @@ def get_sec(time_str):
 
 
 def get_region(pos_x, pos_y, df_pos):
-    for row_in_reg in df_pos.head().itertuples():
+    for row_in_reg in df_pos.itertuples():
         is_in_x = row_in_reg.X + row_in_reg.Xlen >= pos_x >= row_in_reg.X
         is_in_y = row_in_reg.Y + row_in_reg.Ylen >= pos_y >= row_in_reg.Y
         if is_in_x and is_in_y:
@@ -122,6 +122,7 @@ if __name__ == "__main__":
         dfu[dfu.axes[1][6]] = [get_question(user_iter, questions) for user_iter in
                                row_array]  # Adding to 6th col which question it is for
 
+
         coordinates_list = [[row_coordinates.FPOGX * RES_X, row_coordinates.FPOGY * RES_Y] for row_coordinates in
                             dfu.itertuples()]
 
@@ -135,7 +136,12 @@ if __name__ == "__main__":
         # print(dfu.dtypes)
         # print("----------")
         # print(dfu)
-        new_headers = [dfu.axes[1][0], dfu.axes[1][1], dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
+
+        # new headers dropped columns
+        # dfu.axes[1][0]  #TIME(...
+        #  dfu.axes[1][1] #TIMETICKS
+
+        new_headers = ["TIME","TIMETICKS",dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
                        "Question", "Regions"]
         for i, g in dfu.groupby(dfu.axes[1][6]):
             if i == 0:  # All other that are not question from 1 to 33
