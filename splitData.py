@@ -6,7 +6,7 @@ def make_parser(cls):
 
 
 def get_column(data_frame, column):
-    """From pandas dataframe gets column of data"""
+    """From pandas dataframe gets column of data, starts with 0 as first column"""
     return data_frame[data_frame.axes[1][column]]
 
 
@@ -122,7 +122,6 @@ if __name__ == "__main__":
         dfu[dfu.axes[1][6]] = [get_question(user_iter, questions) for user_iter in
                                row_array]  # Adding to 6th col which question it is for
 
-
         coordinates_list = [[row_coordinates.FPOGX * RES_X, row_coordinates.FPOGY * RES_Y] for row_coordinates in
                             dfu.itertuples()]
 
@@ -141,15 +140,22 @@ if __name__ == "__main__":
         # dfu.axes[1][0]  #TIME(...
         #  dfu.axes[1][1] #TIMETICKS
 
-        new_headers = ["TIME","TIMETICKS",dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
+        new_headers = ["TIME", "TIMETICKS", dfu.axes[1][2], dfu.axes[1][3], dfu.axes[1][4], dfu.axes[1][5],
                        "Question", "Regions"]
-        for i, g in dfu.groupby(dfu.axes[1][6]):
-            if i == 0:  # All other that are not question from 1 to 33
-                continue
-            dirName = path_processed + "/" + folder_name
-            if not os.path.exists(dirName):
-                os.mkdir(dirName)
-                print("Directory ", dirName, " Created ")
-            g.to_csv(dirName + "\\" + '{}.csv'.format(i), header=new_headers, mode='w', index=False, index_label=False)
+
+        dirName = path_processed + "/" + folder_name
+        if not os.path.exists(dirName):
+            os.mkdir(dirName)
+            print("Directory ", dirName, " Created ")
+        dfu.to_csv(dirName + "\\" + 'data.csv', header=new_headers, mode='w', index=False, index_label=False)
+
+        # for i, g in dfu.groupby(dfu.axes[1][6]): #GROUP BY
+        #     if i == 0:  # All other that are not question from 1 to 33
+        #         continue
+        #     dirName = path_processed + "/" + folder_name
+        #     if not os.path.exists(dirName):
+        #         os.mkdir(dirName)
+        #         print("Directory ", dirName, " Created ")
+        #     g.to_csv(dirName + "\\" + '{}.csv'.format(i), header=new_headers, mode='w', index=False, index_label=False)
 
         # Foreach in timestamp ( load User folder all_gazes and split)
