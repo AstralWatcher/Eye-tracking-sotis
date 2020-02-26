@@ -42,17 +42,16 @@ def merge_regions(data_frame):
     return data_frame
 
 
-def clean_regions(data_frame, time=0.1, use_fpogv=False):
+def clean_regions(data_frame, time=0.1, use_fpogv=False, time_for_other=0.2):
     to_remove = list()
     for row in data_frame.itertuples():
-        if row.FPOGD < time:
+        if row.FPOGD < time or row.FPOGD < time_for_other and row.Regions == -1:
             to_remove.append(row.Index)
         if use_fpogv and not row.FPOGV:
             to_remove.append(row.Index)
 
     data_frame = data_frame.drop(to_remove)
     return data_frame
-
 
 
 if __name__ == "__main__":
@@ -73,13 +72,12 @@ if __name__ == "__main__":
         path_user = PATH + "\\" + user + "\\" + FILE_NAME
         dfr = pd.read_csv(path_user, index_col=False)
         new_df = merge_regions(data_frame=dfr)
-        new_df = new_df.drop(columns=["TIME", "TIMETICKS", "FPOGX", "FPOGY"])
+        new_df = new_df.drop(columns=["TIME", "TIMETICKS"]) #"FPOGX", "FPOGY"
         print(new_df)
 
-        new_df = clean_regions(new_df,use_fpogv=True)
+        new_df = clean_regions(new_df, use_fpogv=True)
         print("CLEANING NOISE")
         print(new_df)
 
         new_df.to_csv(PATH + "\\" + user + "\\" + 'data_cleaned.csv', mode='w', index=False, index_label=False)
         # break
-
