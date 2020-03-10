@@ -13,7 +13,7 @@ def prepare_new_input_dna(new_input, user_id):
     """
     from sgt import Sgt
     from sklearn.decomposition import PCA
-    df_map_corpus = pd.read_csv("map_dna.txt", delimiter=":", names=["Pre", "Posle"])
+    df_map_corpus = pd.read_csv("map_dna.txt", delimiter=":", names=["Pre", "Posle", "INFO"])
     df_map_corpus = df_map_corpus.tail(-1)
     corpus = df_map_corpus["Posle"].values
 
@@ -151,7 +151,10 @@ def vote(res):
         result = (res == to[el])
         voting[el] = len(res[result])
         print("Voting[" + str(to[el]) + "]=" + str(voting[el]))
-    voting[to.index(-1)] /= 2
+    try:
+        voting[to.index(-1)] /= 2
+    except ValueError:
+        print("Voting advance")
 
     print("Voting won=" + str(to[voting.index(max(voting))]))
     return to[voting.index(max(voting))]
@@ -167,7 +170,7 @@ if __name__ == "__main__":
     new_df = pd.read_csv(basePath + "\\user7\\User 7_all_gaze.csv")
     new_data_prepared = prepare_new_input_dna(new_df, 7)
 
-    train_svm("svm_save", "clustered_data_dna.txt")
+    train_svm("svm_save", "clustered_data_dna_hir.txt")
 
     model = load_svm("svm_save")
 

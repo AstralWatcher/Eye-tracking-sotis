@@ -164,35 +164,37 @@ def get_data_to_cluster(file_name: str = "data_cleaned.csv", norm: bool = True, 
     return array_to_return
 
 
-def plot_tsne(array_to_plot, labels,perplexity=50):
+def plot_tsne(array_to_plot, labels, perplexity=100):
     from sklearn.manifold import TSNE
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
     import seaborn as sns
-    tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, n_iter=2000)
+    tsne = TSNE(n_components=3, verbose=1, perplexity=perplexity, n_iter=5000)
     tsne_results = tsne.fit_transform(array_to_plot)
     print('t-SNE done!')
     ff = tuple(labels.reshape((750,)))
     map_to_pd = {'tsne-2d-one': tsne_results[:, 0], 'tsne-2d-two': tsne_results[:, 1], 'y': ff}
     df = pd.DataFrame(map_to_pd)
     colour_pelet = sns.color_palette("hls", len(np.unique(map_to_pd['y'])))
-    fig = plt.figure()
-    #ax = Axes3D(fig)
-    #ax.scatter(xs=tsne_results[:, 0], ys=tsne_results[:, 1], zs=tsne_results[:, 2], zdir='z', s=14, c=colour_pelet, marker="o", depthshade=True)
-    sns.scatterplot(
-        x="tsne-2d-one", y="tsne-2d-two",
-        hue="y",
-        palette=colour_pelet,
-        data=df,
-        legend="full",
-        alpha=0.3
-    )
-    plt.show()
+    # fig = plt.figure()
+    plot3d(labels, tsne_results, "TSNE ")
+    # sns.scatterplot(
+    #     x="tsne-2d-one", y="tsne-2d-two",
+    #     hue="y",
+    #     palette=colour_pelet,
+    #     data=df,
+    #     legend="full",
+    #     alpha=0.3
+    # )
+    # plt.show()
 
 
-def plot3d(labels, core_samples_mask, array_to_plot):
+def plot3d(labels, array_to_plot, title=""):
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
+
+    core_samples_mask = np.zeros_like(labels, dtype=bool)
+    core_samples_mask[clustering.core_sample_indices_] = True
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -227,7 +229,7 @@ def plot3d(labels, core_samples_mask, array_to_plot):
 
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise_ = list(labels).count(-1)
-    plt.title('Estimated number of clusters: %d' % n_clusters_ + ' Number of noise data: ' + str(n_noise_))
+    plt.title(title + 'Estimated number of clusters: %d' % n_clusters_ + ' Number of noise data: ' + str(n_noise_))
     plt.show()
     print("Finished")
     return 0
@@ -279,8 +281,9 @@ def statistics(_labels, debug=True, it=None):
 def get_optimal(embedding):
     list_y = list()
     list_clusters = list()
-    list_x = [item / 100 for item in range(1, 100, 1)]
-    for i in range(1, 100, 1):
+    _GOTO = 25
+    list_x = [item / 100 for item in range(1, _GOTO, 1)]
+    for i in range(1, _GOTO, 1):
         clustering = DBSCAN(eps=i / 100, min_samples=2).fit(embedding)  # array_to_send  # 8.6
         list_y.append(statistics(clustering.labels_, it=i / 100))
         list_clusters.append(len(np.unique(np.array(clustering.labels_))))
@@ -292,6 +295,26 @@ def get_optimal(embedding):
     plt.title('Number of clusters dpending on Epsilon')
     plt.plot(list_x, list_clusters)
     plt.show()
+
+
+def hirarhical(X, x_den):
+    import matplotlib.pyplot as plt
+    from sklearn.cluster import AgglomerativeClustering
+    import scipy.cluster.hierarchy as shc
+    plt.title("Eye gaze Dendograms")
+    dend = shc.dendrogram(shc.linkage(x_den, method='ward'))
+    plt.show()
+
+    cluster = AgglomerativeClustering(n_clusters=10, affinity='euclidean', linkage='ward')
+    cluster.fit_predict(X)
+    print(cluster.labels_)
+    plot3d(cluster.labels_, X)
+    print("DONE hir")
+    return cluster
+
+
+def db_scan(epsilon, X):
+    return DBSCAN(eps=epsilon, min_samples=2).fit(X)  # array_to_send
 
 
 if __name__ == "__main__":
@@ -312,17 +335,23 @@ if __name__ == "__main__":
     pca = PCA(n_components=3)
     pca.fit(embedding)
     X = pca.transform(embedding)
+
+    pca_den = PCA(n_components=2)
+    pca_den.fit(embedding)
+    x_den = pca.transform(embedding)
+
     get_optimal(X)
-    #epsilon = float(input("Unesite Epsilon:"))
+    # epsilon = float(input("Unesite Epsilon:"))
     epsilon = 0.1
-    clustering = DBSCAN(eps=epsilon, min_samples=2).fit(X)  # array_to_send
+
     array_to_send = np.array(array_to_send)
+    clustering = db_scan(epsilon, X)
 
-    core_samples_mask = np.zeros_like(clustering.labels_, dtype=bool)
-    core_samples_mask[clustering.core_sample_indices_] = True
-    labels = clustering.labels_
+    clustering_hir = hirarhical(X, x_den)
 
-    plot_tsne(embedding, labels,35)
+    labels = clustering.labels_  # TODO Change to clustering.labels_ if want DBSCAN
+
+    plot_tsne(embedding, labels, 35)
 
     import Clasify
 
@@ -334,7 +363,7 @@ if __name__ == "__main__":
         X = pca2.transform(X)
 
     print(labels)  # Show all values of labels
-    plot3d(labels=labels, core_samples_mask=core_samples_mask, array_to_plot=X)
+    plot3d(labels=labels, array_to_plot=X)
     statistics(_labels=labels)
     # TODO Svaku sekvencu sacuvam sa labelom
     # TODO Onda klasifikator (nadgledano ucenje)
@@ -342,11 +371,11 @@ if __name__ == "__main__":
     NEW_LINE = "\n"
     to_file = ""
     for questions_all_user in range(0, len(X)):
-        list_of_data = list(X[questions_all_user])
+        list_of_data = list(X[questions_all_user])  # array_to_send
         list_points = ','.join([str(elem) for elem in list_of_data])
         label = labels[questions_all_user]
         to_file = to_file + list_points + DELIMITER + str(label) + NEW_LINE
-    f = open(file="clustered_data_dna.txt", mode="w")
+    f = open(file="clustered_data_dna_db.txt", mode="w")
     f.write(to_file)
     f.close()
 
