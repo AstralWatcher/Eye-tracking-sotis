@@ -1,4 +1,4 @@
-Duration,Region --> Unique Mapped value
+Region,Duration --> Unique Mapped value
 -1,0: 1
 -1,1: 2
 -1,2: 3

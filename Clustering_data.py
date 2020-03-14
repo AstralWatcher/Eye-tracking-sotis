@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
     clustering_hir = hirarhical(X, x_den)
 
-    labels = clustering.labels_  # TODO Change to clustering.labels_ if want DBSCAN
+    labels = clustering_hir.labels_  # TODO Change to clustering.labels_ if want DBSCAN
 
     plot_tsne(embedding, labels, 35)
 
@@ -371,11 +371,11 @@ if __name__ == "__main__":
     NEW_LINE = "\n"
     to_file = ""
     for questions_all_user in range(0, len(X)):
-        list_of_data = list(X[questions_all_user])  # array_to_send
+        list_of_data = list(array_to_send[questions_all_user])  # array_to_send OR X
         list_points = ','.join([str(elem) for elem in list_of_data])
         label = labels[questions_all_user]
         to_file = to_file + list_points + DELIMITER + str(label) + NEW_LINE
-    f = open(file="clustered_data_dna_db.txt", mode="w")
+    f = open(file="clustered_data_dna_hir_org.txt", mode="w")
     f.write(to_file)
     f.close()
 
